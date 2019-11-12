@@ -57,5 +57,5 @@ def generateTweetTensor(tweets):
 
     padded_vector += [padded_array]
     padded_vector_export = np.array(padded_vector)
-
-    return padded_vector_export
+    tweet_tensor = torch.tensor(padded_vector_export)
+    return tweet_tensor
