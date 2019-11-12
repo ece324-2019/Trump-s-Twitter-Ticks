@@ -30,6 +30,7 @@ def generateTweetTensor(tweets):
         s = [w.translate(table) for w in tw]
         clean_tweets[t] = s
 
+    lengths = []
     word_vector = []
     bad_words = []
     good_count = 0
@@ -46,6 +47,7 @@ def generateTweetTensor(tweets):
                 bad_count += 1
                 bad_words += [w]
         tweet_length = len(tweet_vector)
+        lengths += [tweet_length]
         if tweet_length > max_tweet_len:
             max_tweet_len = tweet_length
         word_vector += [tweet_vector]
@@ -58,4 +60,4 @@ def generateTweetTensor(tweets):
     padded_vector += [padded_array]
     padded_vector_export = np.array(padded_vector)
     tweet_tensor = torch.tensor(padded_vector_export)
-    return tweet_tensor
+    return tweet_tensor, lengths
