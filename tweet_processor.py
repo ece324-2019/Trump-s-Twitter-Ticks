@@ -7,11 +7,7 @@ import re
 import torch
 
 # Function to clean and process trump_tweets_json
-def generateTweetTensor():
-
-    # Load in tweets as JSON
-    tweets = pd.read_json(r'trump_tweets_json.json')
-    tweets = tweets[['created_at', 'text']]
+def generateTweetTensor(tweets):
     tweet_text = tweets['text'].values
 
     # Load pre-trained model for words
