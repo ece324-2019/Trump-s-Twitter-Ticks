@@ -14,7 +14,7 @@ from torchtext import data
 
 
 # Load tweets from json
-tweets = pd.read_json(r'trump_tweets_json.json')
+tweets = pd.read_json('trump_tweets_json.json')
 tweets = tweets[['created_at', 'text']]
 
 # Add labels of Dow Jones
