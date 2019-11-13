@@ -41,7 +41,7 @@ def genLabels(tweetData):
 
     datesW=[]
     for i in range(len(wallSt)-1):
-        year = int(wallSt['Time'][i][:2])
+        year = 2000 + int(wallSt['Time'][i][:2])
         month = int(wallSt['Time'][i][3:5])
         day = int(wallSt['Time'][i][6:8])
         hours = int(wallSt['Time'][i][9:-3])
@@ -56,4 +56,5 @@ def genLabels(tweetData):
         value = findLabel(wallSt['Time'].values,tweetData['datetime'][i])
         labels.append(wallSt['Up or Down'][value])
     tweetData['labels'] = labels
+    print(labels)
     return tweetData
