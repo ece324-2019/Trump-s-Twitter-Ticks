@@ -23,29 +23,28 @@ def genLabels(tweetData):
             changes.append(0)
         else:
             changes.append(sum(data['Change'][i+1:i+4])-sum(data['Change'][i-2:i+1]))
-    changesBinary.append(1 if changes[i-1] > 0 else 0)
+        changesBinary.append(1 if changes[i-1] > 0 else 0)
     data['3 before/3 after change'] = changes
     data['Up or Down'] = changesBinary
     dates=[]
-
     wallSt = data
     BST = timedelta(hours=5)
     for i in range(len(tweetData)):
-        year = int(tweetData['created_at'][i][:4])
-        month = int(tweetData['created_at'][i][5:7])
-        day = int(tweetData['created_at'][i][8:10])
-        hours = int(tweetData['created_at'][i][11:13])
-        minutes = int(tweetData['created_at'][i][14:16])
-        seconds = int(tweetData['created_at'][i][17:19])
+        year = int(str(tweetData['created_at'][i])[:4])
+        month = int(str(tweetData['created_at'][i])[5:7])
+        day = int(str(tweetData['created_at'][i])[8:10])
+        hours = int(str(tweetData['created_at'][i])[11:13])
+        minutes = int(str(tweetData['created_at'][i])[14:16])
+        seconds = int(str(tweetData['created_at'][i])[17:19])
         dates.append(datetime.datetime(year=year,month=month,day=day,hour=hours,minute=minutes,second=seconds)-BST)
     tweetData['datetime']=dates
 
     datesW=[]
     for i in range(len(wallSt)-1):
-        year = int(wallSt['Time'][i][:4])
-        month = int(wallSt['Time'][i][5:7])
-        day = int(wallSt['Time'][i][8:10])
-        hours = int(wallSt['Time'][i][11:-3])
+        year = int(wallSt['Time'][i][:2])
+        month = int(wallSt['Time'][i][3:5])
+        day = int(wallSt['Time'][i][6:8])
+        hours = int(wallSt['Time'][i][9:-3])
         minutes = 0
         seconds = 0
         datesW.append(datetime.datetime(year=year, month=month, day=day, hour=hours, minute=minutes, second=seconds))
@@ -58,4 +57,3 @@ def genLabels(tweetData):
         labels.append(wallSt['Up or Down'][value])
     tweetData['labels'] = labels
     return tweetData
-

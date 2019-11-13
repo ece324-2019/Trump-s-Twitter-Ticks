@@ -7,12 +7,14 @@ import re
 import torch
 
 # Function to clean and process trump_tweets_json
-def generateTweetTensor(tweets):
+def generateTweetTensor(glove, tweets):
     tweet_text = tweets['text'].values
-
+    print("Tweet text:")
+    print(tweet_text.shape)
     # Load pre-trained model for words
-    model = KeyedVectors.load_word2vec_format('glove.twitter.27B.100d.w2vformat.txt')
-
+    #model = KeyedVectors.load_word2vec_format('glove.twitter.27B.100d.w2vformat.txt')
+    model = glove
+    print("Loaded Model")
     # Process and clean tweets
     clean_tweets = tweet_text.copy()
 
@@ -36,7 +38,7 @@ def generateTweetTensor(tweets):
     good_count = 0
     bad_count = 0
     max_tweet_len = 0
-    for t in c:
+    for t in clean_tweets:
         tweet_vector = []
         for w in t:
             try:
@@ -47,17 +49,30 @@ def generateTweetTensor(tweets):
                 bad_count += 1
                 bad_words += [w]
         tweet_length = len(tweet_vector)
-        lengths += [tweet_length]
+        if tweet_length > 0:
+            lengths += [tweet_length]
         if tweet_length > max_tweet_len:
             max_tweet_len = tweet_length
         word_vector += [tweet_vector]
-    padded_vector = []
-    for t in range(0, len(word_vector)):
-        padded_array = np.zeros((max_tweet_len, 100))
-        for i in range(0, len(word_vector[t])):
-            padded_array[i] += word_vector[t][i]
 
-    padded_vector += [padded_array]
+    print("Good Words: " + str(good_count))
+    print("Bad Words: " + str(bad_count))
+
+    padded_vector = []
+    zero_entries = []
+    for t in range(0, len(word_vector)):
+        if len(word_vector[t]) > 0:
+            padded_array = np.zeros((max_tweet_len, 100))
+            for i in range(0, len(word_vector[t])):
+                padded_array[i] += word_vector[t][i]
+
+            padded_vector += [padded_array]
+        else:
+            zero_entries += [t]
+
     padded_vector_export = np.array(padded_vector)
+    print("Array shape: " + str(padded_vector_export.shape))
     tweet_tensor = torch.tensor(padded_vector_export)
-    return tweet_tensor, lengths
+    print("Tensor shape: " + str(tweet_tensor.shape))
+
+    return tweet_tensor, lengths, zero_entries
