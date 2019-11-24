@@ -16,7 +16,6 @@ import pandas as pd
 import numpy as np
 from torchtext import data
 
-
 def calculateAcc(a, p):
 
     b = len(a)

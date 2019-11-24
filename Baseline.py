@@ -1,8 +1,12 @@
 import pandas as pd
-
-def Baseline(tweets):
+import preprocess
+def Baseline(tweets, labels):
     output = []
+    count=0
+    counted=0
+    total=1
     for tweet in tweets:
+        set=True
         tweet = tweet.lower()
         if 'tax cut' in tweet:
             output.append(1)
@@ -64,9 +68,16 @@ def Baseline(tweets):
             output.append(0)
         else:
             output.append(1 if len(tweet)<100 else 0)
+            set=False
+        count+=1
+        if set:
+            if(output[-1]==labels[count]):
+                counted+=1
+            total+=1
+        print(counted/total)
     return output
 data = pd.read_json('trump_tweets_json.json')
-y = Baseline(data['text'])
-for i in range(len(y)):
-    print(data['text'][i]+'  '+str(y[i]))
 
+labeller = preprocess.genLabels(data)
+labels = labeller['labels']
+y = Baseline(data['text'],labels)
