@@ -1,14 +1,9 @@
 import pandas as pd
 import datetime
 from datetime import timedelta
-def findLabel(dates,date):
-    for i in range(len(dates)-1):
-        if(date>dates[i+1]):
-            return i
-    return 0
 
 def genLabels(tweetData):
-    data = pd.read_csv('dowdata.csv')
+    data = pd.read_csv('sANDp.csv')
     for i in range(len(data)):
         if(data['Time'][i][0:2]=='20'):
             data.at[i,'Time'] = (data['Time'][i][5:7]+'/'+data['Time'][i][2:4]+'/'+data['Time'][i][8:])
@@ -16,16 +11,7 @@ def genLabels(tweetData):
             data.at[i, 'Time'] = (data['Time'][i][3:5] + '/' + data['Time'][i][0:2] + data['Time'][i][5:])
         data.at[i,'Time'] = (data['Time'][i][6:8]+data['Time'][i][2:6]+data['Time'][i][:2]+data['Time'][i][8:])
     data.at[i,'Time'] = '20'+data['Time'][i].replace('/','-')
-    changes=[]
-    changesBinary=[]
-    for i in range(len(data)):
-        if(i<2 or i>(len(data)-5)):
-            changes.append(0)
-        else:
-            changes.append(sum(data['Change'][i+1:i+4])-sum(data['Change'][i-2:i+1]))
-        changesBinary.append(1 if changes[i-1] > 0 else 0)
-    data['3 before/3 after change'] = changes
-    data['Up or Down'] = changesBinary
+
     dates=[]
     wallSt = data
     BST = timedelta(hours=5)
@@ -51,10 +37,64 @@ def genLabels(tweetData):
     datesW.append(datetime.datetime(year=1000, month=1, day=1, hour=1, minute=1, second=1))
     wallSt['Time']=datesW
 
-    labels=[]
+    print(wallSt.columns)
+    print(tweetData.columns)
+    casual = []
+    for i in range(len(wallSt)):
+        if(i<2 or i>len(wallSt)-3):
+            casual.append(0)
+        else:
+            casual.append(sum(wallSt['Change'][i:i+3])/3-sum(wallSt['Change'][i-2:i+1])/3)
+    wallSt['second derivative'] = casual
+    print(casual)
+    binary=[]
+    for i in range(len(casual)):
+        if(casual[i]>.2):
+            binary.append(1)
+        elif(casual[i]<-.2):
+            binary.append(-1)
+        else:
+            binary.append(0)
+    wallSt['binary']=binary
+    tweeters=[]
+    j = 0
     for i in range(len(tweetData)):
-        value = findLabel(wallSt['Time'].values,tweetData['datetime'][i])
-        labels.append(wallSt['Up or Down'][value])
-    tweetData['labels'] = labels
-    print(labels)
+        done=0
+        while(done==0):
+            if(wallSt['Time'][j]<tweetData['datetime'][i] and done==0):
+                print(wallSt['Time'][j])
+                print(tweetData['datetime'][i])
+                done = 1
+                tweeters.append(wallSt['binary'][j+1])
+                print(wallSt['binary'][j+1])
+                j-=1
+            if(j==len(wallSt)-1):
+                done = 1
+                tweeters.append(0)
+                j-=1
+            j+=1
+    tweetData['label']=tweeters
+    down = []
+    nochange = []
+    up = []
+    for i in range(len(tweetData)):
+        if (tweetData['label'][i] == -1):
+            down.append(1)
+            nochange.append(0)
+            up.append(0)
+        if (tweetData['label'][i] == 0):
+            down.append(0)
+            nochange.append(1)
+            up.append(0)
+        if (tweetData['label'][i] == 1):
+            down.append(0)
+            nochange.append(0)
+            up.append(1)
+    tweetData['dpwn'] = down
+    tweetData['nochange'] = nochange
+    tweetData['up'] = up
     return tweetData
+tweets = pd.read_json('trump_tweets_json.json')
+tweets = tweets[['created_at', 'text']]
+data = genLabels(tweets)
+data.to_csv('labeledSNP.csv')
