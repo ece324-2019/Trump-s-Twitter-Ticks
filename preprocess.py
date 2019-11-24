@@ -74,25 +74,15 @@ def genLabels(tweetData):
                 j-=1
             j+=1
     tweetData['label']=tweeters
-    down = []
-    nochange = []
-    up = []
+    onehot = []
     for i in range(len(tweetData)):
         if (tweetData['label'][i] == -1):
-            down.append(1)
-            nochange.append(0)
-            up.append(0)
+            onehot.append([1,0,0])
         if (tweetData['label'][i] == 0):
-            down.append(0)
-            nochange.append(1)
-            up.append(0)
+            onehot.append([0,1,0])
         if (tweetData['label'][i] == 1):
-            down.append(0)
-            nochange.append(0)
-            up.append(1)
-    tweetData['dpwn'] = down
-    tweetData['nochange'] = nochange
-    tweetData['up'] = up
+            onehot.append([0,0,1])
+    tweetData['onehot'] = onehot
     return tweetData
 tweets = pd.read_json('trump_tweets_json.json')
 tweets = tweets[['created_at', 'text']]
