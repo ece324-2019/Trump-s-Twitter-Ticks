@@ -87,4 +87,4 @@ def genLabels(tweetData):
 tweets = pd.read_json('trump_tweets_json.json')
 tweets = tweets[['created_at', 'text']]
 data = genLabels(tweets)
-data.to_csv('labeledSNP.csv')
+data.to_csv(r'labeledSNP.csv')
