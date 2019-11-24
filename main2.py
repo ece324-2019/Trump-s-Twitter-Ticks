@@ -5,6 +5,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
+from gensim.models import KeyedVectors
+
+from torch.utils.data import DataLoader
+
 
 from sklearn.model_selection import train_test_split
 import models
@@ -12,9 +16,32 @@ import pandas as pd
 import numpy as np
 from torchtext import data
 
+def calculateAcc(a, p):
+
+    b = len(a)
+    correct = 0
+    for i in range(0, b):
+        if a[i] < 0.5  and p[i] < 0.5:
+            correct += 1
+        elif a[i] > 0.5  and p[i] > 0.5:
+            correct += 1
+
+    acc = correct / b
+    return acc
+
+#Load Pre-trained model for Words
+print("Loading Pre-trained model of many tweets...")
+glove = KeyedVectors.load_word2vec_format('glove.twitter.27B.100d.w2vformat.txt')
+print("Model loaded.")
 
 # Load tweets from json
-tweets = pd.read_json('trump_tweets_json.json')
+
+model = models.RNN(100, 100)
+print(model.parameters())
+optimizer = torch.optim.Adam(model.parameters(), lr= 0.01)
+optimizer.zero_grad()
+
+tweets = pd.read_json(r'trump_tweets_json.json')
 tweets = tweets[['created_at', 'text']]
 
 # Add labels of Dow Jones
@@ -29,34 +56,51 @@ train_x, validate_x, train_y, validate_y = train_test_split(rest_x, rest_y, test
 
 print("Generating vectors...")
 # Generate vector of tweets
-print("Generating Train Vector...")
-train_tweet_vector, train_lengths = generateTweetTensor(train_x)
-train_y_tensor = torch.from_numpy(train_y.to_numpy())
-train_dataset = torch.utils.data.TensorDataset(fields= [('text', train_tweet_vector), ('label', train_y_tensor)] )
-train_iter = data.BucketIterator(train_dataset, batch_size=64,repeat=False, sort_key=lambda x: len(x.text))
+loss_fnc = nn.BCEWithLogitsLoss()
 
 print("Generating Test Vector...")
-test_tweet_vector, test_lengths = generateTweetTensor(test_x)
+test_tweet_vector, test_lengths, test_nulls = generateTweetTensor(glove, test_x)
 test_y_tensor = torch.from_numpy(test_y.to_numpy())
-test_dataset = torch.utils.data.TensorDataset( fields= [('text', test_tweet_vector), ('label', test_y_tensor)] )
-test_iter = data.BucketIterator(test_tweet_vector, batch_size=64,repeat=False, sort_key=lambda x: len(x.text))
+for n in range(0, len(test_nulls)):
+    i  = test_nulls[n] - n
+    test_y_tensor = torch.cat([test_y_tensor[0: i], test_y_tensor[i+1:]])
+
+test_dataset = torch.utils.data.TensorDataset(test_tweet_vector, test_y_tensor, torch.tensor(test_lengths))
+test_iter = DataLoader(test_dataset, batch_size=64, shuffle=True, num_workers=0)
+
 
 print("Generating Validate Vector...")
-validate_tweet_vector, validate_lengths = generateTweetTensor(validate_x)
+validate_tweet_vector, validate_lengths, validate_nulls = generateTweetTensor(glove, validate_x)
 validate_y_tensor = torch.from_numpy(validate_y.to_numpy())
-val_dataset = torch.utils.data.TensorDataset( fields= [('text', validate_tweet_vector), ('label', validate_y_tensor)] )
-val_iter = data.BucketIterator(validate_tweet_vector, batch_size=64, repeat=False, sort_key=lambda x: len(x.text))
+for n in range(0, len(validate_nulls)):
+    i  = validate_nulls[n] - n
+    validate_y_tensor = torch.cat([validate_y_tensor[0: i], validate_y_tensor[i+1:]])
+val_dataset = torch.utils.data.TensorDataset(validate_tweet_vector, validate_y_tensor, torch.tensor(validate_lengths))
+#val_iter = data.BucketIterator(val_dataset, batch_size=64, repeat=False, sort_key=lambda x: len(x.text))
+val_iter = DataLoader(val_dataset, batch_size=64, shuffle=True, num_workers=0)
+
+
+print("Generating Train Vector...")
+train_tweet_vector, train_lengths, train_nulls = generateTweetTensor(glove, train_x)
+train_y_tensor = torch.from_numpy(train_y.to_numpy())
+for n in range(0, len(train_nulls)):
+    i  = train_nulls[n] - n
+    train_y_tensor = torch.cat([train_y_tensor[0: i], train_y_tensor[i+1:]])
+train_dataset = torch.utils.data.TensorDataset(train_tweet_vector, train_y_tensor, torch.tensor(train_lengths) )
+train_iter = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=0)
+
 
 print("Generated buckets.")
 
 # Create rnn
-model = models.RNN(100, 100)
+#model = models.RNN(100, 100)
+print(model.parameters())
 learning_rate = 0.01
 num_epochs = 25
 
 # Train models
 loss_fnc = nn.BCEWithLogitsLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+#optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 eps = []
 training_loss = []
 training_accs = []
@@ -68,24 +112,31 @@ for e in range(num_epochs):
     eps += [e]
     print("Epoch: " + str(e))
     for j, batch in enumerate(train_iter):
-        labels = batch.label
-        inputs, lengths = batch.text
+        inputs = batch[0]
+        actual = batch[1]
+        lengths_float = batch[2]
+        lengths = lengths_float.long()
+        print("success")
         optimizer.zero_grad()
-        predicted = model(inputs, lengths)
-        actual = labels.float()
-        loss = loss_fnc(predicted, actual)
+        predicted = model(inputs,lengths)
+        loss = loss_fnc(predicted, actual.float())
         loss.backward()
         optimizer.step()
 
+    print("Calculating Training Accuracy...")
     # Calculate Training Accuracy
     train_labels = []
     train_preds = []
 
+
     for k, t_batch in enumerate(train_iter):
-        t_labels = t_batch.label
-        t_inputs, v_lengths = t_batch.text
-        train_labels += t_labels.tolist()
-        t_predicted = model(t_inputs, v_lengths)
+        t_inputs = t_batch[0]
+        t_actual = t_batch[1]
+        t_lengths_floats = t_batch[2]
+        t_lengths = t_lengths_floats.long()
+
+        train_labels += t_actual.tolist()
+        t_predicted = model(t_inputs, t_lengths)
         train_preds += t_predicted.tolist()
 
     t_acc = calculateAcc(train_labels, train_preds)
@@ -99,9 +150,11 @@ for e in range(num_epochs):
     valid_labels = []
     valid_preds = []
     for k, v_batch in enumerate(val_iter):
-        v_labels = v_batch.label
-        v_inputs, v_lengths = v_batch.text
-        valid_labels += v_labels.tolist()
+        v_inputs = v_batch[0]
+        v_actual = v_batch[1]
+        v_lengths_floats = v_batch[2]
+        v_lengths = v_lengths_floats.long()
+        valid_labels += v_actual.tolist()
         v_predicted = model(v_inputs, v_lengths)
         valid_preds += v_predicted.tolist()
 
@@ -116,9 +169,11 @@ for e in range(num_epochs):
 test_labels = []
 test_preds = []
 for k, t_batch in enumerate(test_iter):
-    t_labels = t_batch.label
-    t_inputs, t_lengths = t_batch.text
-    test_labels += t_labels.tolist()
+    t_inputs = t_batch[0]
+    t_actual = t_batch[1]
+    t_lengths_floats = t_batch[2]
+    t_lengths = t_lengths_floats.long()
+    test_labels += t_actual.tolist()
     t_predicted = model(t_inputs, t_lengths)
     test_preds += t_predicted.tolist()
 
