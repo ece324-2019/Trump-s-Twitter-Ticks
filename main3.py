@@ -47,10 +47,9 @@ tweets_with_labels = pd.read_csv(r'labeledSNP.csv')
 print("Loaded dataset.")
 
 
-
 # Split sets into train, test, and validation
 print("Splitting data...")
-rest_x, test_x, rest_y, test_y = train_test_split(tweets, tweets_with_labels['labels'], test_size=0.2, random_state=37)
+rest_x, test_x, rest_y, test_y = train_test_split(tweets_with_labels['onehot'], tweets_with_labels['onehot'], test_size=0.2, random_state=37)
 train_x, validate_x, train_y, validate_y = train_test_split(rest_x, rest_y, test_size=0.2, random_state=37)
 
 print("Generating vectors...")
