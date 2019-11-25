@@ -77,12 +77,13 @@ def genLabels(tweetData):
     tweetData['label']=tweeters
     onehot = []
     for i in range(len(tweetData)):
+        print(i)
         if (tweetData['label'][i] == -1):
-            onehot.append(torch.Tensor(1,0,0))
+            onehot.append(np.array([1,0,0]))
         if (tweetData['label'][i] == 0):
-            onehot.append(torch.Tensor(0,1,0))
+            onehot.append(np.array([0,1,0]))
         if (tweetData['label'][i] == 1):
-            onehot.append(torch.Tensor(0,0,1))
+            onehot.append(np.array([0,0,1]))
     tweetData['onehot'] = onehot
     return tweetData
 tweets = pd.read_json('trump_tweets_json.json')
