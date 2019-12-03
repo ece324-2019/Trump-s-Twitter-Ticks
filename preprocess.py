@@ -1,7 +1,7 @@
 import pandas as pd
 import datetime
 from datetime import timedelta
-
+import random
 def genLabels(tweetData):
     data = pd.read_csv('sANDp.csv')
     for i in range(len(data)):
@@ -37,8 +37,6 @@ def genLabels(tweetData):
     datesW.append(datetime.datetime(year=1000, month=1, day=1, hour=1, minute=1, second=1))
     wallSt['Time']=datesW
 
-    print(wallSt.columns)
-    print(tweetData.columns)
     casual = []
     for i in range(len(wallSt)):
         if(i<2 or i>len(wallSt)-3):
@@ -46,7 +44,6 @@ def genLabels(tweetData):
         else:
             casual.append(sum(wallSt['Change'][i:i+3])/3-sum(wallSt['Change'][i-2:i+1])/3)
     wallSt['second derivative'] = casual
-    print(casual)
     binary=[]
     for i in range(len(casual)):
         if(casual[i]>.2):
@@ -62,11 +59,8 @@ def genLabels(tweetData):
         done=0
         while(done==0):
             if(wallSt['Time'][j]<tweetData['datetime'][i] and done==0):
-                print(wallSt['Time'][j])
-                print(tweetData['datetime'][i])
                 done = 1
                 tweeters.append(wallSt['binary'][j+1])
-                print(wallSt['binary'][j+1])
                 j-=1
             if(j==len(wallSt)-1):
                 done = 1
@@ -83,8 +77,29 @@ def genLabels(tweetData):
         if (tweetData['label'][i] == 1):
             onehot.append([0,0,1])
     tweetData['onehot'] = onehot
+    tweetData=augmenter(tweetData)
     return tweetData
-tweets = pd.read_json('trump_tweets_json.json')
-tweets = tweets[['created_at', 'text']]
-data = genLabels(tweets)
-data.to_csv('labeledSNP.csv')
+
+def augmenter(tweetData):
+    data=tweetData
+    for i in range(len(tweetData)):
+        tweet=data['text'][i]
+        if('great' in tweet.lower()):
+            data = data.append(pd.DataFrame({'text':[tweet.replace('great','big')],'onehot':[tweetData['onehot'][i]]}),ignore_index = True)
+        if ('new' in tweet.lower()):
+            data = data.append(pd.DataFrame({'text':[tweet.replace('new','recent')],'onehot':[tweetData['onehot'][i]]}),ignore_index = True)
+        if ('thank' in tweet.lower()):
+            data = data.append(pd.DataFrame({'text':[tweet.replace('thank','grateful')],'onehot':[tweetData['onehot'][i]]}),ignore_index = True)
+        if ('make' in tweet.lower()):
+            data = data.append(pd.DataFrame({'text':[tweet.replace('make','build')],'onehot':[tweetData['onehot'][i]]}),ignore_index = True)
+        if ('now' in tweet.lower()):
+            data = data.append(pd.DataFrame({'text':[tweet.replace('now','current')],'onehot':[tweetData['onehot'][i]]}),ignore_index = True)
+        if ('kavanaugh' in tweet.lower()):
+            data = data.append(pd.DataFrame({'text':[tweet.replace('kavanaugh','judge')],'onehot':[tweetData['onehot'][i]]}),ignore_index = True)
+        if ('get' in tweet.lower()):
+            data = data.append(pd.DataFrame({'text':[tweet.replace('get','acquire')],'onehot':[tweetData['onehot'][i]]}),ignore_index = True)
+        a = random.randint(0,len(tweet)-2)
+        b = random.randint(a,len(tweet)-1)
+        c = random.randint(0,1)
+        data = data.append(pd.DataFrame({'text': [tweet[a:b+1]] if c==0 else [tweet[0:a]+tweet[b:b+1]], 'onehot': [tweetData['onehot'][i]]}),ignore_index=True)
+    return data

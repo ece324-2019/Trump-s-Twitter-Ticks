@@ -8,6 +8,7 @@ import torch
 
 # Function to clean and process trump_tweets_json
 def generateTweetTensor(glove, tweets):
+    print(tweets)
     tweet_text = tweets['text'].values
     print("Tweet text:")
     print(tweet_text.shape)
